@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>知集 - 个人知识库</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #fafaf9;
+        --bg2: #ffffff;
+        --bgH: #f5f5f4;
+        --bgA: #ebebea;
+        --bd: #e5e4e2;
+        --bdL: #f0efed;
+        --tx: #1a1918;
+        --tx2: #6b6560;
+        --tx3: #a39e98;
+        --ai: #2563eb;
+        --product: #7c3aed;
+        --method: #059669;
+        --industry: #d97706;
+        --reading: #dc2643;
+      }
+      html,
+      body,
+      #root {
+        width: 100%;
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        font-family: "Instrument Sans", system-ui, sans-serif;
+        color: var(--tx);
+        background: var(--bg);
+      }
+      .font-title {
+        font-family: "Newsreader", serif;
+      }
+      .font-mono {
+        font-family: "IBM Plex Mono", monospace;
+      }
+      .card-elev {
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+      }
+      .card-elev:hover {
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+      }
+      .line-clamp-3 {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .dot-bg {
+        background-image: radial-gradient(circle at 1px 1px, #e7e5e4 1px, transparent 0);
+        background-size: 18px 18px;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes slideIn {
+        from { transform: translateX(8px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      .fade-in { animation: fadeIn .16s ease; }
+      .slide-in { animation: slideIn .18s ease; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel">
+      const { useMemo, useState, useEffect } = React;
+
+      const DATA = [
+        { id:"1", title:"Transformer架构核心原理", content:"Transformer抛弃了传统RNN的序列依赖，完全基于自注意力机制实现并行计算。编码器-解码器结构通过多头注意力捕捉不同维度的语义关系，位置编码弥补了序列信息的缺失。其核心优势在于长距离依赖建模和训练效率的大幅提升。", category:"ai", tags:["Transformer","深度学习","NLP"], source:"论文笔记", createdAt:"2026-03-18", connections:["2","5"], reviewCount:3, lastReview:"2026-03-20", annotations:["这个架构是理解后续所有大模型的基础，优先掌握"] },
+        { id:"2", title:"用户访谈的五种常见陷阱", content:"做用户访谈时容易犯的错误：1. 引导性提问（把答案藏在问题里）2. 只听想听的（确认偏误）3. 问用户「你会不会用」而非观察实际行为 4. 样本偏差（只访谈活跃用户）5. 忽略沉默——没说的往往比说了的更重要。", category:"product", tags:["用户研究","访谈","方法论"], source:"读书笔记", createdAt:"2026-03-15", connections:["1","3"], reviewCount:5, lastReview:"2026-03-21", annotations:[] },
+        { id:"3", title:"需求优先级评估：RICE模型", content:"RICE是一种需求排序框架：Reach（影响人数）× Impact（影响程度）× Confidence（把握度）÷ Effort（开发成本）。适用于资源有限时做取舍。关键是Confidence维度——如果对影响没把握，应先做小实验验证再投入资源。", category:"product", tags:["需求管理","优先级","RICE"], source:"产品方法论", createdAt:"2026-03-12", connections:["2","4"], reviewCount:2, lastReview:"2026-03-19", annotations:["RICE打分时容易高估Impact，可以加入团队校准环节"] },
+        { id:"4", title:"平台经济的增长飞轮", content:"平台型产品的核心增长逻辑：供给侧丰富度提升 → 用户体验改善 → 需求侧增长 → 吸引更多供给方入驻 → 正循环。关键在于识别飞轮的启动点——大多数平台选择补贴供给侧冷启动，但也有例外（如Clubhouse先激活需求侧）。", category:"industry", tags:["平台经济","增长","商业模式"], source:"行业分析", createdAt:"2026-03-10", connections:["3","8"], reviewCount:1, lastReview:"2026-03-15", annotations:[] },
+        { id:"5", title:"注意力机制的数学直觉", content:"注意力机制的本质是加权求和：Query与Key做点积得到相关性分数，经Softmax归一化后作为权重，对Value加权聚合。多头注意力相当于在不同子空间里并行做注意力计算，再拼接融合。理解了这个，就能理解为什么Transformer能捕捉长距离依赖。", category:"ai", tags:["注意力机制","数学","神经网络"], source:"课程笔记", createdAt:"2026-03-08", connections:["1","6"], reviewCount:4, lastReview:"2026-03-22", annotations:[] },
+        { id:"6", title:"信息流产品的推荐系统设计", content:"信息流推荐的核心挑战是平衡「相关性」和「多样性」。纯协同过滤容易陷入信息茧房，需要引入探索机制（如epsilon-greedy、UCB策略）。评估指标不能只看CTR，还要看用户停留时长、内容多样性指数、长期留存。", category:"industry", tags:["推荐系统","信息流","算法策略"], source:"技术博客", createdAt:"2026-03-05", connections:["5","3"], reviewCount:6, lastReview:"2026-03-21", annotations:["推荐系统的多样性问题可以类比到知识库的「发现」功能设计"] },
+        { id:"7", title:"间隔重复与长期记忆的科学原理", content:"艾宾浩斯遗忘曲线表明，未经复习的信息在24小时内遗忘率高达70%。间隔重复通过在遗忘临界点进行复习，可以将记忆保持率提升至90%以上。最佳复习间隔：1天、3天、7天、14天、30天。", category:"method", tags:["学习方法","记忆","间隔重复"], source:"认知科学", createdAt:"2026-03-01", connections:[], reviewCount:8, lastReview:"2026-03-22", annotations:[] },
+        { id:"8", title:"社区产品冷启动的三种策略", content:"社区产品冷启动三条路径：1. 种子用户邀请制（早期Reddit、知乎）——控制内容质量但增长慢 2. 内容迁移（从其他平台导入优质内容）——快速填充但需解决版权 3. 工具化切入（先做工具再做社区）——降低冷启动门槛。核心是先有内容还是先有用户的鸡生蛋问题。", category:"industry", tags:["社区","冷启动","增长策略"], source:"案例研究", createdAt:"2026-02-28", connections:["4"], reviewCount:3, lastReview:"2026-03-18", annotations:[] },
+      ];
+
+      const AI_SUGGEST = [
+        { from: "4", to: "8", reason: "平台经济的增长飞轮与社区冷启动策略有底层共通的网络效应逻辑" },
+        { from: "6", to: "1", reason: "注意力机制的数学原理直接支撑Transformer架构的理解" },
+        { from: "2", to: "5", reason: "用户访谈技巧可以融入需求优先级矩阵的实际使用流程中" },
+      ];
+
+      const CAT = {
+        all: { label: "全部", color: "#1a1918" },
+        ai: { label: "AI/技术", color: "var(--ai)" },
+        product: { label: "产品设计", color: "var(--product)" },
+        method: { label: "方法论", color: "var(--method)" },
+        industry: { label: "行业洞察", color: "var(--industry)" },
+        reading: { label: "阅读笔记", color: "var(--reading)" },
+      };
+
+      const daysSince = (dateStr) =>
+        Math.floor((new Date("2026-03-22").getTime() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
+
+      function App() {
+        const [page, setPage] = useState("library");
+        const [items, setItems] = useState(DATA);
+        const [selectedId, setSelectedId] = useState(null);
+        const [query, setQuery] = useState("");
+        const [catFilter, setCatFilter] = useState("all");
+        const [showAdd, setShowAdd] = useState(false);
+        const [aiLinks, setAiLinks] = useState(AI_SUGGEST);
+        const [chatMsgs, setChatMsgs] = useState([]);
+
+        const selectedItem = items.find((x) => x.id === selectedId) || null;
+        const stats = useMemo(() => ({
+          entries: items.length,
+          links: items.reduce((sum, it) => sum + it.connections.length, 0),
+          notes: items.reduce((sum, it) => sum + it.annotations.length, 0),
+        }), [items]);
+
+        const dueCount = useMemo(() =>
+          items.filter((it) => {
+            const d = daysSince(it.lastReview);
+            return d >= 7 || it.reviewCount <= 1;
+          }).length
+        , [items]);
+
+        const navs = [
+          { id: "library", text: "知识库" },
+          { id: "graph", text: "知识图谱" },
+          { id: "review", text: "今日回顾", badge: dueCount },
+          { id: "chat", text: "对话检索" },
+        ];
+
+        return (
+          <div className="w-full h-full flex">
+            <aside className="w-[220px] border-r p-4 flex flex-col" style={{ borderColor: "var(--bd)", background: "var(--bg2)" }}>
+              <div className="flex items-center gap-2 mb-6">
+                <div className="w-3 h-3 rounded-full bg-black"></div>
+                <div className="font-title text-2xl">知集</div>
+              </div>
+              <nav className="space-y-1">
+                {navs.map((n) => (
+                  <button key={n.id} onClick={() => setPage(n.id)}
+                    className="w-full text-left flex items-center justify-between px-3 py-2 rounded-lg text-sm"
+                    style={{ background: page === n.id ? "var(--bgA)" : "transparent", fontWeight: page === n.id ? 600 : 500 }}>
+                    <span>{n.text}</span>
+                    {n.badge > 0 && <span className="text-xs bg-black text-white px-2 py-0.5 rounded-md">{n.badge}</span>}
+                  </button>
+                ))}
+              </nav>
+              <div className="mt-auto pt-4 border-t text-sm space-y-2" style={{ borderColor: "var(--bdL)", color: "var(--tx2)" }}>
+                <div className="flex justify-between"><span>知识条目</span><span>{stats.entries}</span></div>
+                <div className="flex justify-between"><span>知识关联</span><span>{stats.links}</span></div>
+                <div className="flex justify-between"><span>个人批注</span><span>{stats.notes}</span></div>
+              </div>
+            </aside>
+
+            <main className="flex-1 min-w-0 flex flex-col">
+              <header className="h-[50px] border-b px-6 flex items-center justify-between" style={{ borderColor: "var(--bd)", background: "var(--bg2)" }}>
+                <h1 className="font-title text-xl">
+                  {page === "library" ? "知识库" : page === "graph" ? "知识图谱" : page === "review" ? "今日回顾" : "对话检索"}
+                </h1>
+                {page === "library" && (
+                  <button onClick={() => setShowAdd(true)} className="bg-black text-white px-4 py-2 rounded-lg text-sm">+ 新增知识</button>
+                )}
+              </header>
+              <section className="flex-1 overflow-auto p-6">
+                {page === "library" && (
+                  <LibraryView items={items} query={query} setQuery={setQuery} catFilter={catFilter} setCatFilter={setCatFilter} onOpen={setSelectedId} />
+                )}
+                {page === "graph" && (
+                  <GraphView items={items} aiLinks={aiLinks} onOpen={setSelectedId}
+                    onAccept={(l) => {
+                      setItems((prev) => prev.map((it) => {
+                        if (it.id === l.from && !it.connections.includes(l.to)) return { ...it, connections: [...it.connections, l.to] };
+                        if (it.id === l.to && !it.connections.includes(l.from)) return { ...it, connections: [...it.connections, l.from] };
+                        return it;
+                      }));
+                      setAiLinks((prev) => prev.filter((x) => !(x.from === l.from && x.to === l.to)));
+                    }}
+                    onIgnore={(l) => setAiLinks((prev) => prev.filter((x) => !(x.from === l.from && x.to === l.to)))}
+                  />
+                )}
+                {page === "review" && <ReviewView items={items} setItems={setItems} />}
+                {page === "chat" && <ChatView items={items} setSelectedId={setSelectedId} msgs={chatMsgs} setMsgs={setChatMsgs} />}
+              </section>
+            </main>
+
+            {selectedItem && <DetailPanel item={selectedItem} items={items} setItems={setItems} onClose={() => setSelectedId(null)} onOpen={setSelectedId} />}
+            {showAdd && <AddModal items={items} setItems={setItems} onClose={() => setShowAdd(false)} />}
+          </div>
+        );
+      }
+
+      function LibraryView({ items, query, setQuery, catFilter, setCatFilter, onOpen }) {
+        const filtered = useMemo(() => {
+          return items.filter((it) => {
+            const inCat = catFilter === "all" || it.category === catFilter;
+            const hay = `${it.title} ${it.content} ${it.tags.join(" ")}`.toLowerCase();
+            return inCat && hay.includes(query.trim().toLowerCase());
+          });
+        }, [items, catFilter, query]);
+        const countByCat = useMemo(() => {
+          const m = { all: items.length };
+          Object.keys(CAT).forEach((k) => { if (k !== "all") m[k] = items.filter((it) => it.category === k).length; });
+          return m;
+        }, [items]);
+
+        return (
+          <div className="space-y-4 fade-in">
+            <div className="flex gap-3 items-center">
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜索标题、内容、标签..."
+                className="w-[300px] px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2"
+                style={{ borderColor: "var(--bd)", background: "var(--bg2)" }} />
+              <div className="flex gap-2 overflow-auto">
+                {Object.entries(CAT).map(([key, c]) => (
+                  <button key={key} onClick={() => setCatFilter(key)}
+                    className="px-3 py-1.5 rounded-full text-sm whitespace-nowrap border"
+                    style={{
+                      background: catFilter === key ? "#111" : "var(--bg2)",
+                      color: catFilter === key ? "#fff" : "var(--tx)",
+                      borderColor: "var(--bd)",
+                    }}>
+                    {c.label} {countByCat[key] ?? 0}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))" }}>
+              {filtered.map((it) => (
+                <button key={it.id} onClick={() => onOpen(it.id)}
+                  className="text-left border rounded-xl p-4 card-elev transition-all duration-150 hover:-translate-y-px"
+                  style={{ borderColor: "var(--bd)", background: "var(--bg2)" }}>
+                  <div className="text-xs mb-2 flex items-center gap-2" style={{ color: CAT[it.category].color }}>
+                    <span className="w-2 h-2 rounded-full" style={{ background: CAT[it.category].color }}></span>
+                    <span>{CAT[it.category].label}</span>
+                  </div>
+                  <h3 className="font-title text-[18px] leading-tight mb-2">{it.title}</h3>
+                  <p className="text-xs line-clamp-3 mb-3" style={{ color: "var(--tx2)" }}>{it.content}</p>
+                  <div className="border-t pt-2 flex items-center gap-2 text-xs" style={{ borderColor: "var(--bdL)" }}>
+                    {it.tags.slice(0, 2).map((t) => (
+                      <span key={t} className="px-2 py-0.5 rounded font-mono" style={{ background: "var(--bgH)" }}>{t}</span>
+                    ))}
+                    <span>💬 {it.annotations.length}</span>
+                    <span className="ml-auto" style={{ color: "var(--tx2)" }}>{it.createdAt}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
+      function AddModal({ items, setItems, onClose }) {
+        const [mode, setMode] = useState("text");
+        const [title, setTitle] = useState("");
+        const [content, setContent] = useState("");
+        const [url, setUrl] = useState("");
+        const [ai, setAi] = useState(null);
+        const [loading, setLoading] = useState(false);
+
+        useEffect(() => {
+          const txt = mode === "link" ? `${title} ${url}` : `${title} ${content}`;
+          if (txt.trim().length <= 20) {
+            setAi(null); setLoading(false); return;
+          }
+          setLoading(true);
+          const timer = setTimeout(() => {
+            const pick = content.includes("访谈") ? "product" : content.includes("注意力") || content.includes("Transformer") ? "ai" : "method";
+            const rel = items.filter((x) => x.category === pick).slice(0, 2);
+            setAi({
+              category: pick,
+              summary: (content || title || url).slice(0, 80),
+              tags: (content.match(/[\u4e00-\u9fa5A-Za-z]{2,8}/g) || []).slice(0, 3),
+              related: rel,
+            });
+            setLoading(false);
+          }, 800);
+          return () => clearTimeout(timer);
+        }, [title, content, url, mode, items]);
+
+        const save = () => {
+          const body = mode === "link" ? `链接：${url}` : content || "来自文件上传";
+          if (!title.trim() || !body.trim()) return;
+          const id = String(Math.max(...items.map((x) => Number(x.id))) + 1);
+          const cat = ai?.category || "method";
+          const next = {
+            id,
+            title: title.trim(),
+            content: body.trim(),
+            category: cat,
+            tags: ai?.tags?.length ? ai.tags : ["新知识"],
+            source: mode === "link" ? "链接解析" : mode === "file" ? "文件上传" : "文字速记",
+            createdAt: "2026-03-22",
+            connections: ai?.related?.map((x) => x.id) || [],
+            reviewCount: 0,
+            lastReview: "2026-03-22",
+            annotations: [],
+          };
+          setItems((prev) => [next, ...prev]);
+          onClose();
+        };
+
+        return (
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 fade-in" onClick={onClose}>
+            <div className="w-[540px] rounded-xl border p-4 bg-white" style={{ borderColor: "var(--bd)" }} onClick={(e) => e.stopPropagation()}>
+              <h3 className="font-title text-xl mb-3">新增知识</h3>
+              <div className="grid grid-cols-3 gap-2 p-1 rounded-lg mb-3" style={{ background: "var(--bgH)" }}>
+                {[
+                  ["text","文字速记"],
+                  ["link","链接解析"],
+                  ["file","文件上传"],
+                ].map(([k, t]) => (
+                  <button key={k} onClick={() => setMode(k)} className="py-2 rounded-md text-sm"
+                    style={{ background: mode === k ? "#fff" : "transparent", border: mode === k ? "1px solid var(--bd)" : "1px solid transparent" }}>{t}</button>
+                ))}
+              </div>
+              <div className="space-y-2">
+                <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="标题"
+                  className="w-full px-3 py-2 border rounded-lg text-sm" style={{ borderColor: "var(--bd)" }} />
+                {mode === "text" && (
+                  <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={5} placeholder="输入内容..."
+                    className="w-full px-3 py-2 border rounded-lg text-sm resize-none" style={{ borderColor: "var(--bd)" }} />
+                )}
+                {mode === "link" && (
+                  <div className="space-y-2">
+                    <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..."
+                      className="w-full px-3 py-2 border rounded-lg text-sm" style={{ borderColor: "var(--bd)" }} />
+                    {url.startsWith("http") && (
+                      <div className="border rounded-lg p-3 text-sm" style={{ borderColor: "var(--bd)", background: "var(--bgH)" }}>
+                        <div className="font-medium">{title || "链接内容预览"}</div>
+                        <div className="text-xs mt-1" style={{ color: "var(--tx2)" }}>{url}</div>
+                        <div className="text-xs mt-2">AI将自动提取内容</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {mode === "file" && (
+                  <label className="border-2 border-dashed rounded-lg p-6 text-center text-sm block cursor-pointer" style={{ borderColor: "var(--bd)", color: "var(--tx2)" }}>
+                    拖拽文件到此处，或点击上传
+                    <div className="text-xs mt-1">支持 PDF / MD / TXT</div>
+                    <input type="file" className="hidden" />
+                  </label>
+                )}
+
+                {loading && (
+                  <div className="text-sm px-3 py-2 rounded-lg animate-pulse" style={{ background: "var(--bgH)" }}>
+                    AI 正在分析内容，自动分类中...
+                  </div>
+                )}
+                {ai && !loading && (
+                  <div className="border rounded-lg p-3 text-sm slide-in" style={{ borderColor: "var(--bd)" }}>
+                    <div className="flex justify-between mb-2"><b>AI 自动整理结果</b><span style={{ color: "var(--tx2)" }}>可修改</span></div>
+                    <div>分类：<span style={{ color: CAT[ai.category].color }}>{CAT[ai.category].label}</span></div>
+                    <div className="mt-1">摘要：{ai.summary || "无摘要"}</div>
+                    <div className="mt-1">标签：{ai.tags.map((t) => <span key={t} className="mr-1 px-1.5 py-0.5 rounded font-mono" style={{ background: "var(--bgH)" }}>{t}</span>)}</div>
+                    <div className="mt-1">关联知识：{ai.related.map((x) => x.title).join(" / ") || "无"}</div>
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 flex justify-end gap-2">
+                <button onClick={onClose} className="px-3 py-2 rounded-lg border text-sm" style={{ borderColor: "var(--bd)" }}>取消</button>
+                <button onClick={save} className="px-3 py-2 rounded-lg text-sm bg-black text-white">保存到知识库</button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      function GraphView({ items, aiLinks, onOpen, onAccept, onIgnore }) {
+        const centerX = 440, centerY = 240, R = 170;
+        const nodes = items.map((it, idx) => {
+          const angle = (Math.PI * 2 * idx) / items.length;
+          const j = ((idx % 3) - 1) * 16;
+          return { ...it, x: centerX + Math.cos(angle) * (R + j), y: centerY + Math.sin(angle) * (R - j) };
+        });
+        const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
+        return (
+          <div className="relative h-full min-h-[560px] rounded-xl border overflow-hidden dot-bg" style={{ borderColor: "var(--bd)", background: "var(--bg2)" }}>
+            <svg width="100%" height="100%" viewBox="0 0 900 560">
+              {nodes.flatMap((n) => n.connections.map((to) => {
+                if (!byId[to] || n.id > to) return null;
+                return <line key={`${n.id}-${to}`} x1={n.x} y1={n.y} x2={byId[to].x} y2={byId[to].y} stroke="#d6d3d1" strokeWidth="1.5" opacity="0.55"/>;
+              }))}
+              {aiLinks.map((l) => {
+                const a = byId[l.from], b = byId[l.to]; if (!a || !b) return null;
+                return <line key={`a-${l.from}-${l.to}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="5,3" opacity="0.6"/>;
+              })}
+              {nodes.map((n) => (
+                <g key={n.id} onClick={() => onOpen(n.id)} style={{ cursor: "pointer" }}>
+                  <circle cx={n.x} cy={n.y} r="22" fill="#fff" stroke={CAT[n.category].color} strokeWidth="2"></circle>
+                  <text x={n.x} y={n.y + 4} textAnchor="middle" fontSize="10" fill="#111">{n.category === "ai" ? "⚡" : n.category === "product" ? "◆" : n.category === "method" ? "▲" : "●"}</text>
+                  <text x={n.x} y={n.y + 36} textAnchor="middle" fontSize="10" fill="#6b6560">{n.title.slice(0, 9)}{n.title.length > 9 ? "…" : ""}</text>
+                </g>
+              ))}
+            </svg>
+            <div className="absolute right-3 top-3 w-[310px] border rounded-xl p-3 bg-white/95" style={{ borderColor: "var(--bd)" }}>
+              <div className="font-medium text-sm mb-2">💡 AI 发现的潜在关联</div>
+              <div className="space-y-2 text-xs">
+                {aiLinks.map((l) => {
+                  const a = items.find((x) => x.id === l.from), b = items.find((x) => x.id === l.to);
+                  return (
+                    <div key={`${l.from}-${l.to}`} className="border rounded p-2" style={{ borderColor: "var(--bdL)" }}>
+                      <div>{a?.title.slice(0,10)}… ↔ {b?.title.slice(0,10)}…</div>
+                      <div style={{ color: "var(--tx2)" }} className="mt-1">{l.reason}</div>
+                      <div className="mt-2 flex gap-2">
+                        <button onClick={() => onAccept(l)} className="px-2 py-1 rounded bg-black text-white">采纳</button>
+                        <button onClick={() => onIgnore(l)} className="px-2 py-1 rounded border" style={{ borderColor: "var(--bd)" }}>忽略</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      function ReviewView({ items, setItems }) {
+        const reviewList = useMemo(() => items
+          .map((it) => ({ ...it, days: daysSince(it.lastReview) }))
+          .filter((it) => it.days >= 7 || it.reviewCount <= 1)
+          .sort((a, b) => b.days - a.days), [items]);
+        const [idx, setIdx] = useState(0);
+        const current = reviewList[idx];
+
+        const reason = (it) => {
+          if (!it) return { text: "已完成", bg: "#ecfccb" };
+          if (it.days >= 14) return { text: `距上次复习已过 ${it.days} 天，即将遗忘`, bg: "#fee2e2" };
+          if (it.days >= 7) return { text: `${it.days} 天未复习，记忆正在衰减`, bg: "#fef3c7" };
+          if (it.reviewCount <= 1) return { text: "仅复习过 1 次，尚未形成长期记忆", bg: "#fef3c7" };
+          return { text: `${it.days} 天前复习过，巩固一下`, bg: "#dcfce7" };
+        };
+        const doneOne = () => {
+          if (!current) return;
+          setItems((prev) => prev.map((x) => x.id === current.id ? { ...x, reviewCount: x.reviewCount + 1, lastReview: "2026-03-22" } : x));
+          setIdx((i) => i + 1);
+        };
+
+        if (!current) {
+          return (
+            <div className="max-w-[500px] mx-auto text-center pt-14">
+              <div className="text-2xl mb-2">✓ 今日回顾完成</div>
+              <p style={{ color: "var(--tx2)" }}>已复习 {reviewList.length} 条知识</p>
+            </div>
+          );
+        }
+        return (
+          <div className="max-w-[500px] mx-auto space-y-4 fade-in">
+            <h2 className="font-title text-[28px]">今日回顾</h2>
+            <p className="text-sm" style={{ color: "var(--tx2)" }}>基于遗忘曲线，挑选了 {reviewList.length} 条待复习知识</p>
+            <div className="flex gap-1.5">
+              {reviewList.map((_, i) => <div key={i} className="h-1.5 flex-1 rounded" style={{ background: i < idx ? "#111" : i === idx ? "#6b7280" : "#e7e5e4" }}></div>)}
+            </div>
+            <div className="border rounded-xl p-4 bg-white" style={{ borderColor: "var(--bd)" }}>
+              <div className="inline-block px-2 py-1 rounded text-xs mb-2" style={{ background: reason(current).bg }}>{reason(current).text}</div>
+              <div className="text-xs mb-1" style={{ color: CAT[current.category].color }}>{CAT[current.category].label}</div>
+              <h3 className="font-title text-xl mb-2">{current.title}</h3>
+              <p className="text-sm" style={{ color: "var(--tx2)" }}>{current.content}</p>
+              <div className="border-t mt-3 pt-2 text-xs flex gap-3" style={{ borderColor: "var(--bdL)", color: "var(--tx2)" }}>
+                <span>来源 {current.source}</span><span>复习次数 {current.reviewCount}</span><span>上次复习 {current.lastReview}</span>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setIdx((i) => i + 1)} className="px-3 py-2 border rounded-lg text-sm" style={{ borderColor: "var(--bd)" }}>还不熟，稍后再看</button>
+              <button onClick={doneOne} className="px-3 py-2 rounded-lg text-sm bg-black text-white">已掌握 ✓</button>
+            </div>
+          </div>
+        );
+      }
+
+      function ChatView({ items, setSelectedId, msgs, setMsgs }) {
+        const [input, setInput] = useState("");
+        const quicks = ["帮我总结设计模式相关的笔记", "最近关注了什么？", "对比注意力机制和Transformer", "写一篇文章大纲"];
+
+        const send = (txt) => {
+          const q = (txt ?? input).trim();
+          if (!q) return;
+          setMsgs((prev) => [...prev, { role: "user", text: q }]);
+          setInput("");
+          const lower = q.toLowerCase();
+          let reply = "我找到以下相关条目：";
+          let refs = [];
+          let generated = "";
+
+          if (lower.includes("transformer") || lower.includes("注意力")) {
+            const a = items.find((x) => x.id === "1"), b = items.find((x) => x.id === "5");
+            refs = [a.id, b.id];
+            reply = "Transformer 的并行建模能力，来自注意力机制将全局依赖转成可微的加权聚合。你可以先理解 Q/K/V 的数学直觉，再映射到多头注意力如何增强表示容量。";
+          } else if (lower.includes("总结") || lower.includes("演讲")) {
+            refs = items.slice(0, 3).map((x) => x.id);
+            generated = "演讲提纲\n1. 核心观点：知识管理从收藏转向再发现\n2. 论据展开：自动分类、图谱关联、间隔复习\n3. 案例支撑：Transformer/访谈/RICE 的跨条目串联\n4. 总结升华：从输入走向输出";
+            reply = "我基于你的知识库生成了一份结构化演讲提纲。";
+          } else if (lower.includes("大纲") || lower.includes("文章") || lower.includes("写")) {
+            refs = items.filter((x) => x.category === "industry").slice(0, 3).map((x) => x.id);
+            generated = "文章大纲\n- 问题：收藏即遗忘\n- 方法：AI 自动整理 + 知识图谱\n- 机制：复习理由驱动的间隔重复\n- 实践：对话检索生成输出";
+            reply = "已为你生成文章大纲，可直接扩写。";
+          } else if (lower.includes("最近") || lower.includes("这周")) {
+            const recent = [...items].sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt)).slice(0,3);
+            refs = recent.map((x) => x.id);
+            reply = `最近新增 3 条：${recent.map((x)=>x.title).join("、")}。主题上 AI/产品占比更高，你想先深入哪条？`;
+          } else {
+            const hit = items.filter((x) => `${x.title}${x.content}${x.tags.join("")}`.toLowerCase().includes(lower)).slice(0, 3);
+            refs = hit.map((x) => x.id);
+            reply = hit.length ? `匹配到 ${hit.length} 条相关知识，我建议从「${hit[0].title}」开始。` : "我暂时没检索到明确匹配，你可以试试：'对比X和Y'、'帮我总结...'、'写一篇...大纲'";
+          }
+
+          setTimeout(() => {
+            setMsgs((prev) => [...prev, { role: "ai", text: reply, refs, generated }]);
+          }, 250);
+        };
+
+        return (
+          <div className="max-w-[620px] mx-auto h-full flex flex-col">
+            <div className="flex-1 overflow-auto pb-4 space-y-4">
+              {msgs.length === 0 && (
+                <div className="pt-16 text-center">
+                  <h2 className="font-title text-3xl mb-2">向你的知识库提问</h2>
+                  <p style={{ color: "var(--tx2)" }} className="text-sm mb-4">搜索、对比分析，或基于知识生成新内容</p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {quicks.map((q) => <button key={q} onClick={() => send(q)} className="px-3 py-1.5 rounded-full border text-sm" style={{ borderColor: "var(--bd)" }}>{q}</button>)}
+                  </div>
+                </div>
+              )}
+              {msgs.map((m, i) => (
+                <div key={i} className="flex gap-3">
+                  <div className={"w-7 h-7 rounded-full text-xs flex items-center justify-center mt-1 " + (m.role === "ai" ? "bg-black text-white" : "bg-stone-300")}>
+                    {m.role === "ai" ? "✦" : "我"}
+                  </div>
+                  <div className="flex-1 text-sm">
+                    <div>{m.text}</div>
+                    {m.generated && <div className="mt-2 p-3 rounded-lg whitespace-pre-wrap" style={{ background: "var(--bgH)" }}>{m.generated}</div>}
+                    {m.refs?.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {m.refs.map((id) => {
+                          const item = items.find((x) => x.id === id); if (!item) return null;
+                          return <button key={id} onClick={() => setSelectedId(id)} className="px-2 py-1 rounded text-xs border" style={{ borderColor: "var(--bd)" }}>{item.title}</button>;
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="sticky bottom-0 bg-[var(--bg)] pt-2">
+              <div className="border rounded-xl p-2 flex gap-2" style={{ borderColor: "var(--bd)", background: "var(--bg2)" }}>
+                <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="输入问题，或让AI基于知识库生成内容..."
+                  className="flex-1 px-2 py-1 text-sm outline-none bg-transparent" onKeyDown={(e)=> e.key === "Enter" && send()} />
+                <button onClick={() => send()} className="w-9 h-9 rounded-lg bg-black text-white text-sm">Send</button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      function DetailPanel({ item, items, setItems, onClose, onOpen }) {
+        const [editing, setEditing] = useState(false);
+        const [draft, setDraft] = useState(item.content);
+        const [note, setNote] = useState("");
+        useEffect(() => { setDraft(item.content); setEditing(false); setNote(""); }, [item.id]);
+        const save = () => {
+          setItems((prev) => prev.map((x) => x.id === item.id ? { ...x, content: draft } : x));
+          setEditing(false);
+        };
+        const addNote = () => {
+          if (!note.trim()) return;
+          setItems((prev) => prev.map((x) => x.id === item.id ? { ...x, annotations: [...x.annotations, note.trim()] } : x));
+          setNote("");
+        };
+        const current = items.find((x) => x.id === item.id) || item;
+
+        return (
+          <div className="fixed inset-0 z-40 flex justify-end bg-black/20" onClick={onClose}>
+            <div className="w-[460px] h-full p-4 border-l bg-white overflow-auto slide-in" style={{ borderColor: "var(--bd)" }} onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs px-2 py-1 rounded" style={{ background: "var(--bgH)", color: CAT[current.category].color }}>{CAT[current.category].label}</span>
+                <div className="flex gap-2 text-sm">
+                  <button onClick={() => setEditing((v) => !v)} className="px-2 py-1 rounded border" style={{ borderColor: "var(--bd)" }}>{editing ? "取消编辑" : "编辑"}</button>
+                  <button onClick={onClose}>×</button>
+                </div>
+              </div>
+              <h3 className="font-title text-2xl mt-3">{current.title}</h3>
+              <div className="text-xs mt-2 flex gap-3" style={{ color: "var(--tx2)" }}>
+                <span>{current.source}</span><span>{current.createdAt}</span><span>复习 {current.reviewCount} 次</span>
+              </div>
+
+              <div className="mt-4">
+                {!editing ? (
+                  <div onClick={() => setEditing(true)} className="border rounded-lg p-3 text-sm cursor-text" style={{ borderColor: "var(--bdL)" }}>{current.content}</div>
+                ) : (
+                  <div>
+                    <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={7} className="w-full border rounded-lg p-3 text-sm resize-none" style={{ borderColor: "var(--bd)" }} />
+                    <button onClick={save} className="mt-2 px-3 py-2 rounded-lg text-sm bg-black text-white">保存</button>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-5">
+                <div className="font-medium mb-2">📝 个人批注</div>
+                {current.annotations.length === 0 && <div className="text-sm" style={{ color: "var(--tx2)" }}>记录你的理解、联想或使用场景</div>}
+                <div className="space-y-2">
+                  {current.annotations.map((a, i) => (
+                    <div key={i} className="text-sm p-2 rounded" style={{ background: "#fef9c3" }}>{a}</div>
+                  ))}
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <input value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={(e)=> e.key==="Enter" && addNote()}
+                    className="flex-1 px-2 py-2 text-sm border rounded-lg" style={{ borderColor: "var(--bd)" }} placeholder="添加批注..." />
+                  <button onClick={addNote} className="px-3 py-2 text-sm rounded-lg bg-black text-white">添加</button>
+                </div>
+              </div>
+
+              <div className="mt-5">
+                <div className="font-medium text-sm mb-2">标签</div>
+                <div className="flex flex-wrap gap-2">{current.tags.map((t) => <span key={t} className="text-xs px-2 py-1 rounded font-mono" style={{ background: "var(--bgH)" }}>{t}</span>)}</div>
+              </div>
+              <div className="mt-5">
+                <div className="font-medium text-sm mb-2">关联知识</div>
+                <div className="space-y-1">
+                  {current.connections.map((id) => {
+                    const c = items.find((x) => x.id === id); if (!c) return null;
+                    return <button key={id} onClick={() => onOpen(id)} className="block text-left text-sm hover:underline">{c.title}</button>;
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+  </body>
+</html>
